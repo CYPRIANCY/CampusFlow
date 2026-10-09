@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# Test and coverage files
+.coverage
+.pytest_cache/
+htmlcov/
+
+# CampusFlow runtime data
+data/tickets.json
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
