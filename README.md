@@ -24,9 +24,9 @@ View and manage the full list of open and closed tickets.
 
 Team:
 
-[AKPEN SESUGH CYPRIAN]
+AKPEN SESUGH CYPRIAN
 
-[JACOB AGERA]
+JACOB AGERA
 
 Requirements
 Python 3.12.3
