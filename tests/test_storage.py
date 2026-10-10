@@ -1,0 +1,82 @@
+import json
+import os
+import tempfile
+import unittest
+
+from campusflow.storage import StorageError, load_tickets, save_tickets
+
+
+def sample_tickets():
+    return [
+        {
+            "id": "T001",
+            "title": "Campus Wi-Fi is down",
+            "category": "Network",
+            "urgency": "high",
+            "affected_users": 15,
+            "priority": "critical",
+            "status": "open",
+            "assigned_to": None,
+        },
+        {
+            "id": "T002",
+            "title": "Laptop screen broken",
+            "category": "Hardware",
+            "urgency": "low",
+            "affected_users": 1,
+            "priority": "low",
+            "status": "in_progress",
+            "assigned_to": "Ada",
+        },
+    ]
+
+
+class TestStorage(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.path = os.path.join(self.temp_dir.name, "tickets.json")
+
+    def test_save_and_reload_preserves_tickets(self):
+        tickets = sample_tickets()
+        save_tickets(tickets, self.path)
+        self.assertEqual(load_tickets(self.path), tickets)
+
+    def test_none_assigned_to_survives_round_trip(self):
+        save_tickets(sample_tickets(), self.path)
+        self.assertIsNone(load_tickets(self.path)[0]["assigned_to"])
+
+    def test_missing_file_gives_empty_list(self):
+        self.assertEqual(load_tickets(self.path), [])
+
+    def test_save_creates_missing_folder(self):
+        nested = os.path.join(self.temp_dir.name, "data", "tickets.json")
+        save_tickets(sample_tickets(), nested)
+        self.assertTrue(os.path.exists(nested))
+
+    def test_malformed_json_raises_and_file_is_untouched(self):
+        with open(self.path, "w", encoding="utf-8") as f:
+            f.write("{ this is not json")
+        with self.assertRaises(StorageError):
+            load_tickets(self.path)
+        with open(self.path, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), "{ this is not json")
+
+    def test_wrong_shape_raises(self):
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump({"id": "T001"}, f)
+        with self.assertRaises(StorageError):
+            load_tickets(self.path)
+
+    def test_save_overwrites_previous_data(self):
+        save_tickets(sample_tickets(), self.path)
+        save_tickets(sample_tickets()[:1], self.path)
+        self.assertEqual(len(load_tickets(self.path)), 1)
+
+    def test_no_temp_files_left_behind(self):
+        save_tickets(sample_tickets(), self.path)
+        self.assertEqual(os.listdir(self.temp_dir.name), ["tickets.json"])
+
+
+if __name__ == "__main__":
+    unittest.main()
