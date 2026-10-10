@@ -21,23 +21,71 @@ def validate_title(title):
     return title
 
 def validate_category(category):
+    if not isinstance(category, str):
+        raise ValueError("Category must be a string")
+
     normalized = category.strip().lower()
+
     allowed = ["network", "hardware", "software", "other"]
+
     if normalized not in allowed:
-        raise ValidationError(f"Category must be one of {allowed}")
-    return normalized.capitalize() #save as "Network"
+        raise ValueError(
+            f"Category must be one of: {allowed}"
+        )
+
+    return normalized.capitalize()
 
 def validate_urgency(urgency):
-        normalized = urgency.strip().lower()
-        if normalized not in ["low", "medium", "high"]:
-            return normalized
+    if not isinstance(urgency, str):
+        raise ValueError("Urgency must be a string")
+
+    normalized = urgency.strip().lower()
+
+    if normalized not in ["low", "medium", "high"]:
+        raise ValueError(
+            "Urgency must be low, medium, or high"
+        )
+
+    return normalized
+    normalized = urgency.strip().lower()
+    if normalized not in ["low", "medium", "high"]:
+        return normalized
 
 def validate_affected_users(value):
-        #value arrives as a STRING from input()
+    if isinstance(value, bool):
+        raise ValueError(
+            "Affected users must be a positive whole number"
+        )
+
+    if isinstance(value, int):
+        number = value
+
+    elif isinstance(value, str):
+        value = value.strip()
+
         try:
-            n = int(value)
+            number = int(value)
         except ValueError:
-                raise ValidationError("affected_users must be a whole number")
-                if n <= 0:
-                    raise ValidationError("affected_users must be positive")
-                return n 
+            raise ValueError(
+                "Affected users must be a whole number"
+            )
+
+    else:
+        raise ValueError(
+            "Affected users must be a whole number"
+        )
+
+    if number <= 0:
+        raise ValueError(
+            "Affected users must be positive"
+        )
+
+    return number
+        #value arrives as a STRING from input()
+    try:
+        n = int(value)
+    except ValueError:
+        raise ValidationError("affected_users must be a whole number")
+        if n <= 0:
+            raise ValidationError("affected_users must be positive")
+            return n 
