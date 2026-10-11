@@ -34,6 +34,14 @@ def validate_category(category):
     return normalized.capitalize()
 
 
+    raise ValueError(
+            f"Category must be one of: {allowed}"
+        )
+
+    return normalized.capitalize()
+
+
+
 def validate_urgency(urgency):
     if not isinstance(urgency, str):
         raise ValueError("Urgency must be a string")
@@ -122,4 +130,31 @@ def get_ticket_by_id(tickets, ticket_id):
         if ticket["id"] == normalized_id:
             return ticket
 
+
     return None
+
+    return None
+
+    raise ValueError(
+         "Affected users must be a whole number"
+        )
+
+    raise ValueError(
+            "Affected users must be a whole number"
+        )
+
+    if number <= 0:
+        raise ValueError(
+            "Affected users must be positive"
+        )
+
+    return number
+        #value arrives as a STRING from input()
+    try:
+        n = int(value)
+    except ValueError:
+        raise ValidationError("affected_users must be a whole number")
+        if n <= 0:
+            raise ValidationError("affected_users must be positive")
+            return n 
+
