@@ -34,7 +34,7 @@ def validate_category(category):
 
     return normalized.capitalize()
 
-        raise ValueError(
+    raise ValueError(
             f"Category must be one of: {allowed}"
         )
 
@@ -144,12 +144,11 @@ def get_ticket_by_id(tickets, ticket_id):
 
     return None
 
-            raise ValueError(
-                "Affected users must be a whole number"
-            )
+    raise ValueError(
+         "Affected users must be a whole number"
+        )
 
-    else:
-        raise ValueError(
+    raise ValueError(
             "Affected users must be a whole number"
         )
 
