@@ -9,6 +9,7 @@ from campusflow.workflow import assign_ticket, change_status
 from campusflow.queue import get_ticket_queue
 from campusflow.reports import generate_report, format_report
 from campusflow.storage import load_tickets, save_tickets, StorageError
+from campusflow.knowledge_lab import run_knowledge_lab
 
 
 def display_ticket(ticket):
@@ -133,6 +134,12 @@ def show_reports(tickets):
     print(format_report(report))
 
 
+def run_engineering_knowledge_lab():
+    """Run the ticket-independent Engineering Knowledge Lab."""
+    print("\n--- Engineering Knowledge Lab ---")
+    run_knowledge_lab()
+
+
 def display_menu():
     """Display the main menu."""
     print("\n========== CampusFlow Helpdesk ==========")
@@ -143,6 +150,7 @@ def display_menu():
     print("5. Change ticket status")
     print("6. View priority queue")
     print("7. View reports")
+    print("8. Engineering Knowledge Lab")
     print("0. Save and exit")
     print("=========================================")
 
@@ -167,6 +175,7 @@ def main():
         "5": lambda: update_ticket_status(tickets),
         "6": lambda: show_priority_queue(tickets),
         "7": lambda: show_reports(tickets),
+        "8": run_engineering_knowledge_lab,
     }
 
     while True:
