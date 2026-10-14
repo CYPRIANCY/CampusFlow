@@ -1,3 +1,4 @@
+from .history import append_event, validate_event_input
 
 def calculate_priority(urgency, affected_users):
     """Calculate priority from urgency and number of affected users."""
@@ -19,6 +20,17 @@ def validate_title(title):
         raise ValueError("Title cannot be blank")
 
     return title
+
+
+def normalize_title(title):
+    """Normalize a title for duplicate comparisons without changing display text."""
+    if not isinstance(title, str):
+        raise ValueError("Title must be a string")
+
+    normalized = " ".join(title.split()).casefold()
+    if not normalized:
+        raise ValueError("Title cannot be blank")
+    return normalized
 
 
 def validate_category(category):
@@ -92,7 +104,16 @@ def _generate_ticket_id(tickets):
     return f"T{next_number:03d}"
 
 
-def create_ticket(tickets, title, category, urgency, affected_users):
+def create_ticket(
+    tickets,
+    title,
+    category,
+    urgency,
+    affected_users,
+    events=None,
+    actor=None,
+    now=None,
+):
     """Validate input, create a ticket, and append it to the list."""
     title = validate_title(title)
     category = validate_category(category)
@@ -110,8 +131,46 @@ def create_ticket(tickets, title, category, urgency, affected_users):
         "assigned_to": None,
     }
 
+    if events is not None:
+        validate_event_input(
+            events,
+            ticket,
+            "CREATE",
+            actor,
+            "open",
+            "open",
+            "Ticket created.",
+            now,
+        )
+
     tickets.append(ticket)
+
+    if events is not None:
+        append_event(
+            events=events,
+            ticket=ticket,
+            event_type="CREATE",
+            actor=actor,
+            before_status="open",
+            after_status="open",
+            details="Ticket created.",
+            now=now,
+        )
+
     return ticket
+
+
+def detect_duplicates(tickets, category, title):
+    """Return unresolved tickets matching the normalized title and category."""
+    normalized_category = validate_category(category)
+    normalized_title = normalize_title(title)
+    return [
+        ticket
+        for ticket in tickets
+        if ticket.get("status") != "resolved"
+        and ticket.get("category") == normalized_category
+        and normalize_title(ticket.get("title", "")) == normalized_title
+    ]
 
 
 def list_tickets(tickets):

@@ -1,4 +1,4 @@
-def assign_ticket(tickets, ticket_id, staff_name):
+def assign_ticket(tickets, ticket_id, staff_name, events=None, actor=None, now=None):
     """Assign a ticket to a staff member. Returns the updated ticket."""
     # 1. Validate the name first
     if not isinstance(staff_name, str) or not staff_name.strip():
@@ -19,8 +19,36 @@ def assign_ticket(tickets, ticket_id, staff_name):
     if found["status"] == "resolved":
         raise ValueError("Resolved tickets must be reopened before changes.")
 
+    if events is not None:
+        from .history import validate_event_input
+
+        validate_event_input(
+            events,
+            found,
+            "ASSIGN",
+            actor,
+            found["status"],
+            found["status"],
+            f"Assigned to {cleaned_name}.",
+            now,
+        )
+
     # 4. Modify only after every check has passed
     found["assigned_to"] = cleaned_name
+
+    if events is not None:
+        from .history import append_event
+
+        append_event(
+            events,
+            found,
+            "ASSIGN",
+            actor,
+            found["status"],
+            found["status"],
+            f"Assigned to {cleaned_name}.",
+            now,
+        )
     return found
 
 
@@ -33,7 +61,7 @@ ALLOWED_TRANSITIONS = {
 }
 
 
-def change_status(tickets, ticket_id, new_status):
+def change_status(tickets, ticket_id, new_status, events=None, actor=None, now=None):
     """Move a ticket to a new status. Returns the updated ticket.
 
     Raises ValueError for an invalid status, unknown ticket, illegal
@@ -67,6 +95,41 @@ def change_status(tickets, ticket_id, new_status):
     if cleaned_status == "in_progress" and not found["assigned_to"]:
         raise ValueError("Assign the ticket before moving it to in_progress.")
 
+    event_type = {
+        "in_progress": "START",
+        "resolved": "RESOLVE",
+        "open": "REOPEN",
+    }[cleaned_status]
+    details = f"Status changed from {current_status} to {cleaned_status}."
+
+    if events is not None:
+        from .history import validate_event_input
+
+        validate_event_input(
+            events,
+            found,
+            event_type,
+            actor,
+            current_status,
+            cleaned_status,
+            details,
+            now,
+        )
+
     # 5. Modify only after every check has passed
     found["status"] = cleaned_status
+
+    if events is not None:
+        from .history import append_event
+
+        append_event(
+            events,
+            found,
+            event_type,
+            actor,
+            current_status,
+            cleaned_status,
+            details,
+            now,
+        )
     return found

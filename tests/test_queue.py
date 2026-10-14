@@ -1,7 +1,7 @@
 
 import unittest
 
-from campusflow.queue import get_ticket_queue
+from campusflow.queue import get_sla_attention_queue, get_ticket_queue
 
 
 class TestTicketQueue(unittest.TestCase):
@@ -63,6 +63,34 @@ class TestTicketQueue(unittest.TestCase):
             [ticket["id"] for ticket in tickets],
             original_ids
         )
+
+    def test_sla_attention_queue_orders_overdue_then_due_at_then_id(self):
+        tickets = [
+            {
+                "id": "T003", "status": "open",
+                "due_at": "2026-10-14T12:00:00+00:00", "is_overdue": False,
+            },
+            {
+                "id": "T002", "status": "in_progress",
+                "due_at": "2026-10-14T10:00:00+00:00", "is_overdue": True,
+            },
+            {
+                "id": "T001", "status": "open",
+                "due_at": "2026-10-14T10:00:00+00:00", "is_overdue": True,
+            },
+            {
+                "id": "T004", "status": "resolved",
+                "due_at": "2026-10-14T09:00:00+00:00", "is_overdue": True,
+            },
+        ]
+
+        result = get_sla_attention_queue(
+            tickets,
+            now="fixed-test-time",
+            overdue_checker=lambda ticket, now: ticket["is_overdue"],
+        )
+
+        self.assertEqual([ticket["id"] for ticket in result], ["T001", "T002", "T003"])
 
 
 if __name__ == "__main__":
