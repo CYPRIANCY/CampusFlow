@@ -1,7 +1,7 @@
 
 import unittest
 
-from campusflow.reports import format_report, generate_report
+from campusflow.reports import format_report, generate_report, generate_sla_metrics
 
 
 def make_ticket(ticket_id, status="open", priority="low"):
@@ -72,6 +72,43 @@ class TestGenerateReport(unittest.TestCase):
         tickets = [make_ticket("T001", status="open", priority="high")]
         before = [dict(t) for t in tickets]
         generate_report(tickets)
+        self.assertEqual(tickets, before)
+
+    def test_sla_metrics_are_read_only_and_do_not_double_count(self):
+        tickets = [
+            {
+                **make_ticket("T001", status="open", priority="high"),
+                "is_overdue": True,
+                "escalation_cycle": 0,
+                "escalated_cycle": 0,
+            },
+            {
+                **make_ticket("T002", status="in_progress", priority="medium"),
+                "is_overdue": False,
+                "escalation_cycle": 1,
+                "escalated_cycle": None,
+            },
+            {
+                **make_ticket("T003", status="resolved", priority="low"),
+                "is_overdue": True,
+                "escalation_cycle": 0,
+                "escalated_cycle": 0,
+            },
+        ]
+        before = [dict(ticket) for ticket in tickets]
+
+        metrics = generate_sla_metrics(
+            tickets,
+            now="fixed-test-time",
+            overdue_checker=lambda ticket, now: ticket["is_overdue"],
+        )
+
+        self.assertEqual(metrics["open_count"], 1)
+        self.assertEqual(metrics["in_progress_count"], 1)
+        self.assertEqual(metrics["resolved_count"], 1)
+        self.assertEqual(metrics["overdue_unresolved_count"], 1)
+        self.assertEqual(metrics["escalated_in_current_cycle_count"], 2)
+        self.assertEqual(metrics["by_priority"]["high"], 1)
         self.assertEqual(tickets, before)
 
 

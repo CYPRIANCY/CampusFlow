@@ -1,8 +1,10 @@
 
 import unittest
+from datetime import datetime, timezone
 
 from campusflow.tickets import (
     create_ticket,
+    detect_duplicates,
     list_tickets,
     get_ticket_by_id,
 )
@@ -77,7 +79,57 @@ class TestTicketCreation(unittest.TestCase):
             create_ticket(
                 self.tickets, "   ", "Network", "high", "12"
             )
+    def test_ticket_creation_records_a_create_event_when_audit_data_is_given(self):
+        events = []
+        now = datetime(2026, 10, 14, 10, 0, tzinfo=timezone.utc)
 
+        ticket = create_ticket(
+            self.tickets,
+            "Wi-Fi is down",
+            "Network",
+            "high",
+            "12",
+            events=events,
+            actor="Engineer B",
+            now=now,
+        )
+
+        self.assertEqual(len(self.tickets), 1)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event_type"], "CREATE")
+        self.assertEqual(events[0]["ticket_id"], ticket["id"])
+        self.assertEqual(events[0]["actor"], "Engineer B")
+    def test_invalid_audit_actor_creates_neither_ticket_nor_event(self):
+        events = []
+        now = datetime(2026, 10, 14, 10, 0, tzinfo=timezone.utc)
+
+        with self.assertRaises(ValueError):
+            create_ticket(
+                self.tickets,
+                "Wi-Fi is down",
+                "Network",
+                "high",
+                "12",
+                events=events,
+                actor="   ",
+                now=now,
+            )
+
+        self.assertEqual(self.tickets, [])
+        self.assertEqual(events, [])
+
+    def test_duplicate_detection_normalizes_title_and_ignores_resolved_tickets(self):
+        matching_ticket = create_ticket(
+            self.tickets, " Wi-Fi   Down ", "Network", "high", "12"
+        )
+        resolved_ticket = create_ticket(
+            self.tickets, "Wi-Fi Down", "Network", "low", "1"
+        )
+        resolved_ticket["status"] = "resolved"
+
+        matches = detect_duplicates(self.tickets, " network ", "wi-fi down")
+
+        self.assertEqual(matches, [matching_ticket])
 
 if __name__ == "__main__":
     unittest.main()
