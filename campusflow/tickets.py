@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+from campusflow.sla import calculate_due_at
 
 def calculate_priority(urgency, affected_users):
     """Calculate priority from urgency and number of affected users."""
@@ -92,12 +95,25 @@ def _generate_ticket_id(tickets):
     return f"T{next_number:03d}"
 
 
-def create_ticket(tickets, title, category, urgency, affected_users):
-    """Validate input, create a ticket, and append it to the list."""
+def create_ticket(tickets, title, category, urgency, affected_users, now=None):
+    """Validate input, create a ticket, and initialize its SLA fields."""
     title = validate_title(title)
     category = validate_category(category)
     urgency = validate_urgency(urgency)
     affected_users = validate_affected_users(affected_users)
+
+    # Use the supplied time in tests, or the current UTC time.
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    # SLA timestamps must include timezone information.
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("Datetime must be timezone-aware.")
+
+    now = now.astimezone(timezone.utc)
+    timestamp = now.isoformat()
+
+    priority = calculate_priority(urgency, affected_users)
 
     ticket = {
         "id": _generate_ticket_id(tickets),
@@ -105,13 +121,39 @@ def create_ticket(tickets, title, category, urgency, affected_users):
         "category": category,
         "urgency": urgency,
         "affected_users": affected_users,
-        "priority": calculate_priority(urgency, affected_users),
+        "priority": priority,
         "status": "open",
         "assigned_to": None,
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "due_at": calculate_due_at(priority.capitalize(), now),
+        "escalation_cycle": 0,
+        "escalated_cycle": None,
     }
 
     tickets.append(ticket)
     return ticket
+
+# def create_ticket(tickets, title, category, urgency, affected_users):
+#     """Validate input, create a ticket, and append it to the list."""
+#     title = validate_title(title)
+#     category = validate_category(category)
+#     urgency = validate_urgency(urgency)
+#     affected_users = validate_affected_users(affected_users)
+
+#     ticket = {
+#         "id": _generate_ticket_id(tickets),
+#         "title": title,
+#         "category": category,
+#         "urgency": urgency,
+#         "affected_users": affected_users,
+#         "priority": calculate_priority(urgency, affected_users),
+#         "status": "open",
+#         "assigned_to": None,
+#     }
+
+#     tickets.append(ticket)
+#     return ticket
 
 
 def list_tickets(tickets):
