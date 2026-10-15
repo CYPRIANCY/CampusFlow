@@ -42,3 +42,30 @@ def format_report(report):
     for priority, count in report["by_priority"].items():
         lines.append(f"  {priority}: {count}")
     return "\n".join(lines)
+
+
+def generate_sla_metrics(tickets, now, overdue_checker):
+    """Return read-only counts for SLA-focused reporting."""
+    if not callable(overdue_checker):
+        raise ValueError("An overdue checker is required.")
+
+    base_report = generate_report(tickets)
+    overdue_unresolved_count = sum(
+        1
+        for ticket in tickets
+        if ticket.get("status") != "resolved" and overdue_checker(ticket, now)
+    )
+    escalated_in_current_cycle_count = sum(
+        1
+        for ticket in tickets
+        if isinstance(ticket.get("escalation_cycle"), int)
+        and ticket.get("escalated_cycle") == ticket.get("escalation_cycle")
+    )
+    return {
+        "open_count": base_report["by_status"]["open"],
+        "in_progress_count": base_report["by_status"]["in_progress"],
+        "resolved_count": base_report["by_status"]["resolved"],
+        "overdue_unresolved_count": overdue_unresolved_count,
+        "escalated_in_current_cycle_count": escalated_in_current_cycle_count,
+        "by_priority": base_report["by_priority"],
+    }

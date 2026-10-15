@@ -1,7 +1,11 @@
+
 from datetime import datetime, timezone
 from campusflow.sla import calculate_due_at
 
 def assign_ticket(tickets, ticket_id, staff_name):
+
+def assign_ticket(tickets, ticket_id, staff_name, events=None, actor=None, now=None):
+
     """Assign a ticket to a staff member. Returns the updated ticket."""
     # 1. Validate the name first
     if not isinstance(staff_name, str) or not staff_name.strip():
@@ -22,8 +26,36 @@ def assign_ticket(tickets, ticket_id, staff_name):
     if found["status"] == "resolved":
         raise ValueError("Resolved tickets must be reopened before changes.")
 
+    if events is not None:
+        from .history import validate_event_input
+
+        validate_event_input(
+            events,
+            found,
+            "ASSIGN",
+            actor,
+            found["status"],
+            found["status"],
+            f"Assigned to {cleaned_name}.",
+            now,
+        )
+
     # 4. Modify only after every check has passed
     found["assigned_to"] = cleaned_name
+
+    if events is not None:
+        from .history import append_event
+
+        append_event(
+            events,
+            found,
+            "ASSIGN",
+            actor,
+            found["status"],
+            found["status"],
+            f"Assigned to {cleaned_name}.",
+            now,
+        )
     return found
 
 
@@ -35,9 +67,20 @@ ALLOWED_TRANSITIONS = {
     "resolved": {"open"},  # explicit reopen
 }
 
+
 def change_status(tickets, ticket_id, new_status, now=None):
     """Change ticket status and maintain SLA timestamps and cycles."""
     # 1. Validate and normalize the new status.
+
+
+def change_status(tickets, ticket_id, new_status, events=None, actor=None, now=None):
+    """Move a ticket to a new status. Returns the updated ticket.
+
+    Raises ValueError for an invalid status, unknown ticket, illegal
+    transition, or moving an unassigned ticket to in_progress.
+    """
+    # 1. Validate and normalize the new status
+
     if not isinstance(new_status, str):
         raise ValueError("Status must be text.")
 
@@ -71,6 +114,7 @@ def change_status(tickets, ticket_id, new_status, now=None):
     if cleaned_status == "in_progress" and not found["assigned_to"]:
         raise ValueError("Assign the ticket before moving it to in_progress.")
 
+
     # 5. Validate the timestamp before changing the ticket.
     if now is None:
         now = datetime.now(timezone.utc)
@@ -91,6 +135,45 @@ def change_status(tickets, ticket_id, new_status, now=None):
         found["escalated_cycle"] = None
         found["due_at"] = calculate_due_at(
             found["priority"].capitalize(),
+            now,
+        )
+
+
+    event_type = {
+        "in_progress": "START",
+        "resolved": "RESOLVE",
+        "open": "REOPEN",
+    }[cleaned_status]
+    details = f"Status changed from {current_status} to {cleaned_status}."
+
+    if events is not None:
+        from .history import validate_event_input
+
+        validate_event_input(
+            events,
+            found,
+            event_type,
+            actor,
+            current_status,
+            cleaned_status,
+            details,
+            now,
+        )
+
+    # 5. Modify only after every check has passed
+    found["status"] = cleaned_status
+
+    if events is not None:
+        from .history import append_event
+
+        append_event(
+            events,
+            found,
+            event_type,
+            actor,
+            current_status,
+            cleaned_status,
+            details,
             now,
         )
 

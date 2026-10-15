@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 
 from campusflow.workflow import assign_ticket, change_status
 
@@ -48,6 +49,26 @@ class TestAssignTicket(unittest.TestCase):
         assign_ticket(self.tickets, "T001", "Ada")
         assign_ticket(self.tickets, "T001", "Bola")
         self.assertEqual(self.tickets[0]["assigned_to"], "Bola")
+
+    def test_valid_assignment_records_an_assign_event(self):
+        events = []
+        now = datetime(2026, 10, 14, 10, 0, tzinfo=timezone.utc)
+
+        ticket = assign_ticket(
+            self.tickets,
+            "T001",
+            "Ada",
+            events=events,
+            actor="Engineer B",
+            now=now,
+        )
+
+        self.assertEqual(ticket["assigned_to"], "Ada")
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event_type"], "ASSIGN")
+        self.assertEqual(events[0]["ticket_id"], "T001")
+        self.assertEqual(events[0]["before_status"], "open")
+        self.assertEqual(events[0]["after_status"], "open")
 
 
 class TestChangeStatus(unittest.TestCase):
@@ -106,6 +127,30 @@ class TestChangeStatus(unittest.TestCase):
         assign_ticket(self.tickets, "T001", "Ada")
         change_status(self.tickets, "t001", "  IN_PROGRESS ")
         self.assertEqual(self.tickets[0]["status"], "in_progress")
+
+    def test_successful_status_changes_record_start_resolve_and_reopen_events(self):
+        events = []
+        now = datetime(2026, 10, 14, 10, 0, tzinfo=timezone.utc)
+        assign_ticket(self.tickets, "T001", "Ada")
+
+        change_status(
+            self.tickets, "T001", "in_progress",
+            events=events, actor="Engineer B", now=now,
+        )
+        change_status(
+            self.tickets, "T001", "resolved",
+            events=events, actor="Engineer B", now=now,
+        )
+        change_status(
+            self.tickets, "T001", "open",
+            events=events, actor="Engineer B", now=now,
+        )
+
+        self.assertEqual(
+            [event["event_type"] for event in events],
+            ["START", "RESOLVE", "REOPEN"],
+        )
+        self.assertEqual(self.tickets[0]["status"], "open")
 
 
 if __name__ == "__main__":
