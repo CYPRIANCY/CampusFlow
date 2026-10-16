@@ -109,5 +109,39 @@ class TestStorage(unittest.TestCase):
         self.assertEqual(state["events"], events)
 
 
+    def test_saved_state_preserves_ticket_history_after_reload(self):
+        tickets = [
+            {
+                "id": "T001",
+                "title": "Campus Wi-Fi is down",
+                "status": "open",
+            }
+        ]
+
+        events = [
+            {
+                "event_id": "E0001",
+                "ticket_id": "T001",
+                "event_type": "CREATE",
+                "actor": "operator",
+                "timestamp": "2026-10-16T10:00:00+00:00",
+                "before_status": "open",
+                "after_status": "open",
+                "details": "Ticket created.",
+            }
+        ]
+
+        save_state(tickets, events, self.path)
+
+        reloaded_state = load_state(self.path)
+
+        self.assertEqual(reloaded_state["tickets"], tickets)
+        self.assertEqual(reloaded_state["events"], events)
+        self.assertEqual(
+            reloaded_state["events"][0]["ticket_id"],
+            reloaded_state["tickets"][0]["id"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
