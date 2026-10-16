@@ -3,8 +3,13 @@ import os
 import tempfile
 import unittest
 
-from campusflow.storage import StorageError, load_tickets, save_tickets
-
+from campusflow.storage import (
+    StorageError,
+    load_tickets,
+    save_tickets,
+    load_state,
+    save_state,
+)
 
 def sample_tickets():
     return [
@@ -76,6 +81,32 @@ class TestStorage(unittest.TestCase):
     def test_no_temp_files_left_behind(self):
         save_tickets(sample_tickets(), self.path)
         self.assertEqual(os.listdir(self.temp_dir.name), ["tickets.json"])
+
+    
+
+    def test_save_and_load_version_two_state(self):
+        tickets = [
+            {
+                "id": "T001",
+                "title": "Cannot log in",
+                "status": "open",
+            }
+        ]
+
+        events = [
+            {
+                "event_id": "E001",
+                "ticket_id": "T001",
+                "event_type": "CREATE",
+            }
+        ]
+
+        save_state(tickets, events, self.path)
+        state = load_state(self.path)
+
+        self.assertEqual(state["schema_version"], 2)
+        self.assertEqual(state["tickets"], tickets)
+        self.assertEqual(state["events"], events)
 
 
 if __name__ == "__main__":

@@ -2,8 +2,6 @@
 from datetime import datetime, timezone
 from campusflow.sla import calculate_due_at
 
-def assign_ticket(tickets, ticket_id, staff_name):
-
 def assign_ticket(tickets, ticket_id, staff_name, events=None, actor=None, now=None):
 
     """Assign a ticket to a staff member. Returns the updated ticket."""
