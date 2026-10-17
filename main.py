@@ -8,7 +8,7 @@ from campusflow.tickets import (
 from campusflow.workflow import assign_ticket, change_status
 from campusflow.queue import get_ticket_queue
 from campusflow.reports import generate_report, format_report
-from campusflow.storage import load_tickets, save_tickets, StorageError
+from campusflow.storage import load_state, save_state, StorageError
 from campusflow.knowledge_lab import run_knowledge_lab
 
 
@@ -48,17 +48,14 @@ def display_tickets(tickets):
         ))
 
 
-def save_changes(tickets):
-    """Save ticket changes and report any saving errors."""
+def save_changes(tickets, events):
     try:
-        save_tickets(tickets)
-        print("Changes saved successfully.")
-    except (OSError, StorageError, TypeError, ValueError) as error:
-        print(f"Warning: Could not save changes: {error}")
-        print("The changes may still exist in memory, but are not saved.")
+        save_state(tickets, events)
+        print("Tickets and history saved successfully.")
+    except (StorageError, OSError) as error:
+        print(f"Could not save data: {error}")
 
-
-def create_new_ticket(tickets):
+def create_new_ticket(tickets, events):
     """Collect user input and create a ticket."""
     print("\n--- Create a Ticket ---")
 
@@ -74,10 +71,12 @@ def create_new_ticket(tickets):
             category,
             urgency,
             affected_users,
+            events=events,
+            actor="operator",
         )
         print(f"\nTicket {ticket['id']} created successfully.")
         display_ticket(ticket)
-        save_changes(tickets)
+        save_changes(tickets, events)
     except ValueError as error:
         print(f"\nCould not create ticket: {error}")
 
@@ -93,29 +92,41 @@ def view_ticket(tickets):
         display_ticket(ticket)
 
 
-def assign_existing_ticket(tickets):
+def assign_existing_ticket(tickets, events):
     """Assign a ticket to a staff member."""
     ticket_id = input("Enter ticket ID: ")
     staff_name = input("Enter staff member's name: ")
 
     try:
-        ticket = assign_ticket(tickets, ticket_id, staff_name)
+        ticket = assign_ticket(
+            tickets,
+            ticket_id,
+            staff_name,
+            events=events,
+            actor="operator",
+        )
         print(f"Ticket {ticket['id']} assigned to {ticket['assigned_to']}.")
-        save_changes(tickets)
+        save_changes(tickets, events)
     except ValueError as error:
         print(f"Could not assign ticket: {error}")
 
 
-def update_ticket_status(tickets):
+def update_ticket_status(tickets, events):
     """Change a ticket's status."""
     ticket_id = input("Enter ticket ID: ")
     print("Available statuses: open, in_progress, resolved")
     new_status = input("Enter the new status: ")
 
     try:
-        ticket = change_status(tickets, ticket_id, new_status)
+        ticket = change_status(
+            tickets,
+            ticket_id,
+            new_status,
+            events=events,
+            actor="operator",
+        )
         print(f"Ticket {ticket['id']} status is now '{ticket['status']}'.")
-        save_changes(tickets)
+        save_changes(tickets, events)
     except ValueError as error:
         print(f"Could not change status: {error}")
 
@@ -158,7 +169,9 @@ def display_menu():
 def main():
     """Start the CampusFlow application."""
     try:
-        tickets = load_tickets()
+        state = load_state()
+        tickets = state["tickets"]
+        events = state["events"]
     except StorageError as error:
         print(f"Could not load tickets safely:\n{error}")
         print("Fix the ticket file before restarting CampusFlow.")
@@ -168,11 +181,11 @@ def main():
     print(f"Loaded {len(tickets)} ticket(s).")
 
     actions = {
-        "1": lambda: create_new_ticket(tickets),
+        "1": lambda: create_new_ticket(tickets, events),
         "2": lambda: display_tickets(list_tickets(tickets)),
         "3": lambda: view_ticket(tickets),
-        "4": lambda: assign_existing_ticket(tickets),
-        "5": lambda: update_ticket_status(tickets),
+        "4": lambda: assign_existing_ticket(tickets, events),
+        "5": lambda: update_ticket_status(tickets, events),
         "6": lambda: show_priority_queue(tickets),
         "7": lambda: show_reports(tickets),
         "8": run_engineering_knowledge_lab,
@@ -188,7 +201,7 @@ def main():
             return
 
         if choice == "0":
-            save_changes(tickets)
+            save_changes(tickets, events)
             print("Thank you for using CampusFlow!")
             break
 
