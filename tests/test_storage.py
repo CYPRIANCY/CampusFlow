@@ -141,6 +141,16 @@ class TestStorage(unittest.TestCase):
             reloaded_state["events"][0]["ticket_id"],
             reloaded_state["tickets"][0]["id"],
         )
+    
+    def test_duplicate_ticket_ids_are_rejected(self):
+        tickets = [
+            {"id": "T001", "title": "Wi-Fi is down"},
+            {"id": "T001", "title": "Laptop is broken"},
+        ]
+
+        with self.assertRaises(StorageError):
+            save_state(tickets, [], self.path)
+
 
 
 if __name__ == "__main__":

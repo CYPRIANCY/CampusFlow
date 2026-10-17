@@ -119,6 +119,23 @@ class TestChangeStatus(unittest.TestCase):
             change_status(self.tickets, "T001", "done")
         self.assertEqual(self.tickets[0]["status"], "open")
 
+    def test_invalid_actor_leaves_ticket_and_events_unchanged(self):
+        assign_ticket(self.tickets, "T001", "Ada")
+        events = []
+        original_ticket = self.tickets[0].copy()
+
+        with self.assertRaises(ValueError):
+            change_status(
+                self.tickets,
+                "T001",
+                "in_progress",
+                events=events,
+                actor="   ",
+            )
+
+        self.assertEqual(self.tickets[0], original_ticket)
+        self.assertEqual(events, [])
+
     def test_unknown_id_rejected(self):
         with self.assertRaises(ValueError):
             change_status(self.tickets, "T999", "in_progress")

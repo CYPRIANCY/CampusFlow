@@ -34,6 +34,25 @@ def _validate_state(data, path):
             f"Ticket file '{path}' must contain a list of ticket objects."
         )
 
+    ticket_ids = []
+
+    for ticket in tickets:
+        ticket_id = ticket.get("id")
+
+        if not isinstance(ticket_id, str) or not ticket_id.strip():
+            raise StorageError(
+                f"Ticket file '{path}' contains a ticket "
+                "with a missing or invalid ID."
+            )
+
+        if ticket_id in ticket_ids:
+            raise StorageError(
+                f"Ticket file '{path}' contains duplicate ticket ID "
+                f"'{ticket_id}'."
+            )
+
+        ticket_ids.append(ticket_id)
+
     if not isinstance(events, list) or not all(
         isinstance(event, dict) for event in events
     ):
