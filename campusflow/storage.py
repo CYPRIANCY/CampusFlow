@@ -60,6 +60,40 @@ def _validate_state(data, path):
             f"Ticket file '{path}' must contain a list of event objects."
         )
 
+    event_ids = []
+
+    for event in events:
+        event_id = event.get("event_id")
+
+        if not isinstance(event_id, str) or not event_id.strip():
+            raise StorageError(
+                f"Ticket file '{path}' contains an event "
+                "with a missing or invalid event ID."
+            )
+
+        if event_id in event_ids:
+            raise StorageError(
+                f"Ticket file '{path}' contains duplicate event ID "
+                f"'{event_id}'."
+            )
+
+        event_ids.append(event_id)
+            # Every history event must refer to a ticket that exists.
+    for event in events:
+        ticket_id = event.get("ticket_id")
+
+        if not isinstance(ticket_id, str) or not ticket_id.strip():
+            raise StorageError(
+                f"Ticket file '{path}' contains an event "
+                "with a missing or invalid ticket ID."
+            )
+
+        if ticket_id not in ticket_ids:
+            raise StorageError(
+                f"Ticket file '{path}' contains an event referencing "
+                f"unknown ticket ID '{ticket_id}'."
+            )
+
 
 def _write_state(data, path):
     """Write JSON atomically so incomplete writes do not replace the file."""

@@ -82,7 +82,7 @@ class TestStorage(unittest.TestCase):
         save_tickets(sample_tickets(), self.path)
         self.assertEqual(os.listdir(self.temp_dir.name), ["tickets.json"])
 
-    
+
 
     def test_save_and_load_version_two_state(self):
         tickets = [
@@ -141,7 +141,7 @@ class TestStorage(unittest.TestCase):
             reloaded_state["events"][0]["ticket_id"],
             reloaded_state["tickets"][0]["id"],
         )
-    
+
     def test_duplicate_ticket_ids_are_rejected(self):
         tickets = [
             {"id": "T001", "title": "Wi-Fi is down"},
@@ -151,6 +151,35 @@ class TestStorage(unittest.TestCase):
         with self.assertRaises(StorageError):
             save_state(tickets, [], self.path)
 
+
+    def test_duplicate_event_ids_are_rejected(self):
+        tickets = [
+            {"id": "T001", "title": "Wi-Fi is down"},
+        ]
+
+        events = [
+            {"event_id": "E001", "ticket_id": "T001"},
+            {"event_id": "E001", "ticket_id": "T001"},
+        ]
+
+        with self.assertRaises(StorageError):
+            save_state(tickets, events, self.path)
+
+    def test_event_referencing_unknown_ticket_is_rejected(self):
+        tickets = [
+            {"id": "T001", "title": "Wi-Fi is down"},
+        ]
+
+        events = [
+            {
+                "event_id": "E001",
+                "ticket_id": "T999",
+                "event_type": "CREATE",
+            }
+        ]
+
+        with self.assertRaises(StorageError):
+            save_state(tickets, events, self.path)
 
 
 if __name__ == "__main__":
